@@ -86,36 +86,44 @@ namespace Bricksoft.DosToys
 					return 0;
 				}
 
-				for (int index = 0; index < args.Length; index++) {
-					if (args[index].Equals("-f", StringComparison.CurrentCultureIgnoreCase) || args[index].Equals("-file", StringComparison.CurrentCultureIgnoreCase)) {
-						if (index <= args.Length - 2) {
-							StringBuilder contents;
+				if (ConsoleEx.IsInputRedirected) {
+					// When piping text to pcolor, I'm assuming that there is only
+					// one argument for pcolor and that is a color.
+					cmdlineBuilder.Append(args[0]);
+					cmdlineBuilder.Append(Console.In.ReadToEnd());
+				} else {
+					// Read all the content from the arguments.
+					for (int index = 0; index < args.Length; index++) {
+						if (args[index].Equals("-f", StringComparison.CurrentCultureIgnoreCase) || args[index].Equals("-file", StringComparison.CurrentCultureIgnoreCase)) {
+							if (index <= args.Length - 2) {
+								StringBuilder contents;
 
-							index++;
-							contents = new StringBuilder();
+								index++;
+								contents = new StringBuilder();
 
-							if (!File.Exists(args[index])) {
+								if (!File.Exists(args[index])) {
+									Console.ForegroundColor = errorColor;
+									WriteLine(ConsoleColor.Red, "-f    the file was not found");
+									DisplayUsage("-f");
+									Console.ForegroundColor = normalColor;
+									return 4;
+								}
+
+								if (contents.LoadFromFile(args[index])) {
+									cmdlineBuilder.Append(contents.ToString());
+								}
+							} else {
 								Console.ForegroundColor = errorColor;
-								WriteLine(ConsoleColor.Red, "-f    the file was not found");
+								WriteLine(ConsoleColor.Red, "-f    is missing its file name");
 								DisplayUsage("-f");
 								Console.ForegroundColor = normalColor;
 								return 4;
 							}
-
-							if (contents.LoadFromFile(args[index])) {
-								cmdlineBuilder.Append(contents.ToString());
-							}
 						} else {
-							Console.ForegroundColor = errorColor;
-							WriteLine(ConsoleColor.Red, "-f    is missing its file name");
-							DisplayUsage("-f");
-							Console.ForegroundColor = normalColor;
-							return 4;
-						}
-					} else {
-						cmdlineBuilder.Append(args[index]);
-						if (index < args.Length - 1 && !args[index].EndsWith("\n")) {
-							cmdlineBuilder.Append(" ");
+							cmdlineBuilder.Append(args[index]);
+							if (index < args.Length - 1 && !args[index].EndsWith("\n")) {
+								cmdlineBuilder.Append(" ");
+							}
 						}
 					}
 				}
