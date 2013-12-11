@@ -45,6 +45,12 @@ namespace Bricksoft.DosToys
 			StringBuilder cmdlineBuilder;
 			int result;
 
+			// TODO change this project to use the Config settings.
+
+			bool translateCR = false;
+			bool translateLF = false;
+			bool translateTab = false;
+
 			cmdlineBuilder = new StringBuilder();
 
 			try {
@@ -94,7 +100,10 @@ namespace Bricksoft.DosToys
 				} else {
 					// Read all the content from the arguments.
 					for (int index = 0; index < args.Length; index++) {
-						if (args[index].Equals("-f", StringComparison.CurrentCultureIgnoreCase) || args[index].Equals("-file", StringComparison.CurrentCultureIgnoreCase)) {
+						string a = args[index];
+						string al = a.ToLowerInvariant();
+
+						if (al.Equals("-f") || al.Equals("-file")) {
 							if (index <= args.Length - 2) {
 								StringBuilder contents;
 
@@ -119,9 +128,36 @@ namespace Bricksoft.DosToys
 								Console.ForegroundColor = normalColor;
 								return 4;
 							}
+
+							#region cl / lf / tab
+						} else if (al.EndsWith("-escape") || al.EndsWith("-crlf") || al.EndsWith("-cr-lf") || al.EndsWith("-cr-lf-tab")) {
+							translateCR = true;
+							translateLF = true;
+							translateTab = true;
+						} else if (al.EndsWith("!escape") || al.EndsWith("!crlf") || al.EndsWith("!cr-lf") || al.EndsWith("!cr-lf-tab")) {
+							translateCR = false;
+							translateLF = false;
+							translateTab = false;
+
+						} else if (al.EndsWith("-cr")) {
+							translateCR = true;
+						} else if (al.EndsWith("!cr")) {
+							translateCR = false;
+
+						} else if (al.EndsWith("-lf")) {
+							translateLF = true;
+						} else if (al.EndsWith("!lf")) {
+							translateLF = false;
+
+						} else if (al.EndsWith("-tab")) {
+							translateTab = true;
+						} else if (al.EndsWith("!tab")) {
+							translateTab = false;
+							#endregion
+
 						} else {
-							cmdlineBuilder.Append(args[index]);
-							if (index < args.Length - 1 && !args[index].EndsWith("\n")) {
+							cmdlineBuilder.Append(a);
+							if (index < args.Length - 1 && !a.EndsWith("\n")) {
 								cmdlineBuilder.Append(" ");
 							}
 						}
@@ -131,9 +167,15 @@ namespace Bricksoft.DosToys
 				cmdline = cmdlineBuilder.ToString();
 
 				// Convert hand-typed/specific linefeeds and tabs
-				cmdline = cmdline.Replace("\\r\\n", "\r\n");
-				cmdline = cmdline.Replace("\\n", "\n");
-				cmdline = cmdline.Replace("\\t", "\t");
+				if (translateCR) {
+					cmdline = cmdline.Replace("\\r\\n", "\r\n");
+				}
+				if (translateLF) {
+					cmdline = cmdline.Replace("\\n", "\n");
+				}
+				if (translateTab) {
+					cmdline = cmdline.Replace("\\t", "\t");
+				}
 
 				// Convert old DOS colors to .net ConsoleColor
 				cmdline = ConvertDOSColors(cmdline);
@@ -191,6 +233,13 @@ namespace Bricksoft.DosToys
 			}
 			Console.WriteLine("   -s color            Apply the color to the console. (not just the text being output.)");
 			Console.ForegroundColor = normalColor;
+
+			Console.WriteLine("   -cr                 Convert the char literals `\\`+`r` to `\\r`.");
+			Console.WriteLine("   !cr                 Do not convert the char literals from `\\`+`r` to `\\r`.");
+			Console.WriteLine("   -lf                 Convert the char literals `\\`+`n` to `\\n`.");
+			Console.WriteLine("   !lf                 Do not convert the char literals from `\\`+`n` to `\\n`.");
+			Console.WriteLine("   -tab                Convert the char literals `\\`+`t` to `\\t`.");
+			Console.WriteLine("   !tab                Do not convert the char literals from `\\`+`t` to `\\t`.");
 
 			if (Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "c", "color")) {
 				Console.ForegroundColor = highlightColor;
