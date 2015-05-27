@@ -3,7 +3,7 @@ pcolor
 
 output colored text lines to the console
 
-    color.exe [-s] -color ["]text {color}text["] -color ["]text text["] ...
+    pcolor.exe [-s] -color ["]text {color}text["] -color ["]text text["] ...
     Copyleft (L) 2010. Free to use and modify. Use at your own risk.
 
        -s color            Apply the color to the console. (not just the text being output.)
