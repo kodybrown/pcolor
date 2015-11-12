@@ -75,6 +75,7 @@ namespace Bricksoft.DosToys
 			bool translateCR = false;
 			bool translateLF = false;
 			bool translateTab = false;
+			bool wrapOutput = false;
 
 			cmdlineBuilder = new StringBuilder();
 
@@ -154,7 +155,6 @@ namespace Bricksoft.DosToys
 								return 4;
 							}
 
-							#region cl / lf / tab
 						} else if (al.EndsWith("-escape") || al.EndsWith("-crlf") || al.EndsWith("-cr-lf") || al.EndsWith("-cr-lf-tab")) {
 							translateCR = true;
 							translateLF = true;
@@ -168,17 +168,19 @@ namespace Bricksoft.DosToys
 							translateCR = true;
 						} else if (al.EndsWith("!cr")) {
 							translateCR = false;
-
 						} else if (al.EndsWith("-lf")) {
 							translateLF = true;
 						} else if (al.EndsWith("!lf")) {
 							translateLF = false;
-
 						} else if (al.EndsWith("-tab")) {
 							translateTab = true;
 						} else if (al.EndsWith("!tab")) {
 							translateTab = false;
-							#endregion
+
+						} else if (al.EndsWith("-wrap")) {
+							wrapOutput = true;
+						} else if (al.EndsWith("!wrap")) {
+							wrapOutput = false;
 
 						} else {
 							// Convert hand-typed/specific linefeeds and tabs
@@ -192,7 +194,12 @@ namespace Bricksoft.DosToys
 								a = a.Replace("\\t", "\t");
 							}
 
-							cmdlineBuilder.Append(a);
+							if (wrapOutput) {
+								cmdlineBuilder.Append(Text.Wrap(a));
+							} else {
+								cmdlineBuilder.Append(a);
+							}
+
 							if (argsi < args.Length - 1 && !a.EndsWith("\n")) {
 								cmdlineBuilder.Append(" ");
 							}
@@ -262,21 +269,24 @@ namespace Bricksoft.DosToys
 			Console.WriteLine();
 			Console.WriteLine("   -crlf               Converts cr, lf, and tab literals.");
 			Console.WriteLine("   !crlf               Do not convert any.");
+			Console.WriteLine();
+			Console.WriteLine(Text.Wrap("   -wrap               Wraps the output to the console width. Wraps each argument by itself.", 0, 0, 23));
+			Console.WriteLine("   !wrap               Turns wrapping off.");
 
 			if (Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "c", "color")) {
 				Console.ForegroundColor = highlightColor;
 			}
 			Console.WriteLine();
-			Console.WriteLine(Text.Wrap("   {color}             The color to use. Use the color value (number) or name of the color (case in-sensitive). All text following the color will be displayed in that color.", -1, 0, 23));
+			Console.WriteLine(Text.Wrap("   {color}             The color to use. Use the color value (number) or name of the color (case in-sensitive). All text following the color will be displayed in that color.", 0, 0, 23));
 			Console.ForegroundColor = normalColor;
 
 			Console.WriteLine();
-			Console.WriteLine(Text.Wrap("The flags above are all 'chainable', meaning they can be used repeatedly throughout the command-line arguments. See the examples for more details.", -1, 6));
+			Console.WriteLine(Text.Wrap("The flags above are all 'chainable', meaning they can be used repeatedly throughout the command-line arguments. See the examples for more details.", -6, 6));
 
 			//if (ShowHidden || Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "f", "file")) {
 			//	Console.ForegroundColor = highlightColor;
 			Console.WriteLine();
-			Console.WriteLine(Text.Wrap("   -file \"filename\"    Displays the file contents. Colors are read the same as if entered on the command-line.", -1, 0, 23));
+			Console.WriteLine(Text.Wrap("   -file \"filename\"    Displays the file contents. Colors are read the same as if entered on the command-line.", 0, 0, 23));
 			//	Console.ForegroundColor = normalColor;
 			//}
 
@@ -284,7 +294,7 @@ namespace Bricksoft.DosToys
 				Console.ForegroundColor = highlightColor;
 			}
 			Console.WriteLine();
-			Console.WriteLine(Text.Wrap("   -s color            Apply the color to the console, not just the text being output.", -1, 0, 23));
+			Console.WriteLine(Text.Wrap("   -s color            Apply the color to the console, not just the text being output.", 0, 0, 23));
 			Console.ForegroundColor = normalColor;
 
 			Console.WriteLine();

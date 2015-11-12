@@ -55,7 +55,7 @@ namespace Bricksoft.PowerCode
 		/// <returns></returns>
 		public static string Wrap( string Text, int WrapWidth )
 		{
-			return Wrap(Text, (WrapWidth < 1) ? new int[] { } : new int[] { WrapWidth }, null);
+			return Wrap(Text, new int[] { WrapWidth }, null);
 		}
 
 		/// <summary>
@@ -68,7 +68,7 @@ namespace Bricksoft.PowerCode
 		/// <returns></returns>
 		public static string Wrap( string Text, int WrapWidth, params int[] Indentations )
 		{
-			return Wrap(Text, (WrapWidth < 1) ? new int[] { } : new int[] { WrapWidth }, Indentations);
+			return Wrap(Text, new int[] { WrapWidth }, Indentations);
 		}
 
 		/// <summary>
@@ -89,6 +89,17 @@ namespace Bricksoft.PowerCode
 
 			if (WrapWidths == null || WrapWidths.Length == 0) {
 				WrapWidths = new int[] { Console.WindowWidth };
+			} else {
+				for (int i = 0; i < WrapWidths.Length; i++) {
+					if (WrapWidths[i] == 0) {
+						WrapWidths[i] = Console.WindowWidth;
+					} else if (WrapWidths[i] < 0) {
+						WrapWidths[i] = Console.WindowWidth - Math.Abs(WrapWidths[i]);
+					}
+					if (WrapWidths[i] < 1) {
+						WrapWidths[i] = 1;
+					}
+				}
 			}
 			if (Indentations == null || Indentations.Length == 0) {
 				Indentations = new int[] { 0 };
