@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using Bricksoft.PowerCode;
 
 namespace Bricksoft.DosToys
 {
@@ -123,18 +124,18 @@ namespace Bricksoft.DosToys
 					cmdlineBuilder.Append(Console.In.ReadToEnd());
 				} else {
 					// Read all the content from the arguments.
-					for (int index = 0; index < args.Length; index++) {
-						string a = args[index];
+					for (int argsi = 0; argsi < args.Length; argsi++) {
+						string a = args[argsi];
 						string al = a.ToLowerInvariant();
 
 						if (al.Equals("-f") || al.Equals("-file")) {
-							if (index <= args.Length - 2) {
+							if (argsi <= args.Length - 2) {
 								StringBuilder contents;
 
-								index++;
+								argsi++;
 								contents = new StringBuilder();
 
-								if (!File.Exists(args[index])) {
+								if (!File.Exists(args[argsi])) {
 									Console.ForegroundColor = errorColor;
 									WriteLine(ConsoleColor.Red, "-f    the file was not found");
 									DisplayUsage("-f");
@@ -142,7 +143,7 @@ namespace Bricksoft.DosToys
 									return 4;
 								}
 
-								if (contents.LoadFromFile(args[index])) {
+								if (contents.LoadFromFile(args[argsi])) {
 									cmdlineBuilder.Append(contents.ToString());
 								}
 							} else {
@@ -180,8 +181,19 @@ namespace Bricksoft.DosToys
 							#endregion
 
 						} else {
+							// Convert hand-typed/specific linefeeds and tabs
+							if (translateCR) {
+								a = a.Replace("\\r\\n", "\r\n");
+							}
+							if (translateLF) {
+								a = a.Replace("\\n", "\n");
+							}
+							if (translateTab) {
+								a = a.Replace("\\t", "\t");
+							}
+
 							cmdlineBuilder.Append(a);
-							if (index < args.Length - 1 && !a.EndsWith("\n")) {
+							if (argsi < args.Length - 1 && !a.EndsWith("\n")) {
 								cmdlineBuilder.Append(" ");
 							}
 						}
@@ -189,17 +201,6 @@ namespace Bricksoft.DosToys
 				}
 
 				cmdline = cmdlineBuilder.ToString();
-
-				// Convert hand-typed/specific linefeeds and tabs
-				if (translateCR) {
-					cmdline = cmdline.Replace("\\r\\n", "\r\n");
-				}
-				if (translateLF) {
-					cmdline = cmdline.Replace("\\n", "\n");
-				}
-				if (translateTab) {
-					cmdline = cmdline.Replace("\\t", "\t");
-				}
 
 				// Convert old DOS colors to .net ConsoleColor
 				cmdline = ConvertDOSColors(cmdline);
@@ -245,18 +246,12 @@ namespace Bricksoft.DosToys
 
 		private void DisplayUsage( string Topic, bool ShowHidden )
 		{
-
 			Console.ForegroundColor = highlightColor;
-			Console.WriteLine("color.exe [-s] -color [\"]text {color}text[\"] -color [\"]text text[\"] ...");
+			Console.WriteLine("color.exe [-s] [-f filename] ...");
 			Console.ForegroundColor = normalColor;
-			Console.WriteLine("Copyleft (L) 2010. Free to use and modify. Use at your own risk.");
+			Console.WriteLine("Copyright (C) 2010-2015 Kody Brown.");
+			Console.WriteLine("Released under the MIT license. Use at your own risk.");
 			Console.WriteLine();
-
-			if (Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "f", "file")) {
-				Console.ForegroundColor = highlightColor;
-			}
-			Console.WriteLine("   -s color            Apply the color to the console. (not just the text being output.)");
-			Console.ForegroundColor = normalColor;
 
 			Console.WriteLine("   -cr                 Convert the char literals `\\`+`r` to `\\r`.");
 			Console.WriteLine("   !cr                 Do not convert the char literals from `\\`+`r` to `\\r`.");
@@ -264,19 +259,33 @@ namespace Bricksoft.DosToys
 			Console.WriteLine("   !lf                 Do not convert the char literals from `\\`+`n` to `\\n`.");
 			Console.WriteLine("   -tab                Convert the char literals `\\`+`t` to `\\t`.");
 			Console.WriteLine("   !tab                Do not convert the char literals from `\\`+`t` to `\\t`.");
+			Console.WriteLine();
+			Console.WriteLine("   -crlf               Converts cr, lf, and tab literals.");
+			Console.WriteLine("   !crlf               Do not convert any.");
 
 			if (Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "c", "color")) {
 				Console.ForegroundColor = highlightColor;
 			}
-			Console.WriteLine("   {color}             The color to use. Use the color value (number) or name of the color (case in-sensitive).");
-			Console.WriteLine("                       All text following the color will be displayed in that color.");
+			Console.WriteLine();
+			Console.WriteLine(Text.Wrap("   {color}             The color to use. Use the color value (number) or name of the color (case in-sensitive). All text following the color will be displayed in that color.", -1, 0, 23));
 			Console.ForegroundColor = normalColor;
 
-			if (ShowHidden || Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "f", "file")) {
+			Console.WriteLine();
+			Console.WriteLine(Text.Wrap("The flags above are all 'chainable', meaning they can be used repeatedly throughout the command-line arguments. See the examples for more details.", -1, 6));
+
+			//if (ShowHidden || Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "f", "file")) {
+			//	Console.ForegroundColor = highlightColor;
+			Console.WriteLine();
+			Console.WriteLine(Text.Wrap("   -file \"filename\"    Displays the file contents. Colors are read the same as if entered on the command-line.", -1, 0, 23));
+			//	Console.ForegroundColor = normalColor;
+			//}
+
+			if (Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "f", "file")) {
 				Console.ForegroundColor = highlightColor;
-				Console.WriteLine("   -file \"filename\"  Displays the file contents. Colors are read as if entered on the command-line.");
-				Console.ForegroundColor = normalColor;
 			}
+			Console.WriteLine();
+			Console.WriteLine(Text.Wrap("   -s color            Apply the color to the console, not just the text being output.", -1, 0, 23));
+			Console.ForegroundColor = normalColor;
 
 			Console.WriteLine();
 			Console.WriteLine("   /?                  display help.");
@@ -334,6 +343,17 @@ namespace Bricksoft.DosToys
 				Write(ConsoleColor.White, "White ");
 				WriteLine(ConsoleColor.Blue, "Blue");
 				Console.WriteLine();
+				Console.WriteLine("pcolor.exe {Red} \\\"Red\\\" {White} \\\"White\\\" {Blue} \\\"Blue\\\".");
+				Write(ConsoleColor.Red, "\"Red\" ");
+				Write(ConsoleColor.White, "\"White\" ");
+				WriteLine(ConsoleColor.Blue, "\"Blue\"");
+				Console.WriteLine();
+				//pcolor.exe --crlf "{Red}\tRed\n{White}\tWhite\n" -!crlf "{Gray}\tand..\n" "{Blue}\tBlue\n."
+				Console.WriteLine("pcolor.exe --crlf \"{Red}\\tRed\\n{White}\\tWhite\\n\" -!crlf \"{Gray}\\tand..\\n\" \"{Blue}\\tBlue\\n.\"");
+				Write(ConsoleColor.Red, "\"Red\" ");
+				Write(ConsoleColor.White, "\"White\" ");
+				WriteLine(ConsoleColor.Blue, "\"Blue\"");
+
 			}
 
 			Console.ForegroundColor = normalColor;
