@@ -49,6 +49,8 @@ namespace Bricksoft.DosToys
 		private ConsoleColor errorForeColor;
 		private ConsoleColor errorBackColor;
 
+		private static List<string> ConsoleColorNames = new List<string>(Enum.GetNames(typeof(ConsoleColor)));
+
 		public pcolor( string[] arguments )
 		{
 			args = arguments;
@@ -88,10 +90,7 @@ namespace Bricksoft.DosToys
 			try {
 				if (args.Length == 2 && (args[0].Equals("-s", StringComparison.CurrentCultureIgnoreCase) || args[0].Equals("-set", StringComparison.CurrentCultureIgnoreCase))) {
 					ConsoleColor tmpColor;
-					string[] colors;
 					string arg;
-
-					colors = Enum.GetNames(typeof(ConsoleColor));
 
 					arg = args[1];
 					if (arg.StartsWith("{") && arg.EndsWith("}")) {
@@ -101,9 +100,10 @@ namespace Bricksoft.DosToys
 					// Convert old DOS colors to .net ConsoleColor
 					arg = ConvertDOSColors(arg); // TODO support bg
 
-					if (int.TryParse(arg, out result)) {
+					if (int.TryParse(arg, out result)
+							&& result >= (int)ConsoleColor.Black && result <= (int)ConsoleColor.White) {
 						tmpColor = (ConsoleColor)result;
-					} else if (colors.Contains(arg, StringComparison.InvariantCultureIgnoreCase)) {
+					} else if (ConsoleColorNames.Contains(arg, StringComparison.InvariantCultureIgnoreCase)) {
 						tmpColor = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), arg, true);
 					} else {
 						Console.ForegroundColor = ConsoleColor.Red;
@@ -273,10 +273,17 @@ namespace Bricksoft.DosToys
 				text2 = "";
 
 			Console.ForegroundColor = highlightForeColor;
-			Console.WriteLine("color.exe [-s] [-f filename] ...");
+			Console.WriteLine("color.exe");
 			Console.ForegroundColor = normalForeColor;
 			Console.WriteLine(Text.Wrap("Copyright (C) 2010-2015 Kody Brown."));
 			Console.WriteLine(Text.Wrap("Released under the MIT license. Use at your own risk."));
+			Console.WriteLine();
+
+			Console.ForegroundColor = ConsoleColor.White;
+			Console.WriteLine("USAGE:");
+			Console.ForegroundColor = normalForeColor;
+			Console.WriteLine();
+			Console.WriteLine("  color.exe [-s] [-f filename] ...");
 			Console.WriteLine();
 
 			Console.WriteLine(Text.Wrap("   -cr                 Convert the char literals `\\`+`r` to `\\r`.", 0, 0, 23));
@@ -370,7 +377,7 @@ namespace Bricksoft.DosToys
 				WriteColoredString(text + "\n");
 				Console.WriteLine();
 
-				text = "{4}So is this line.";
+				text = "{5}So is this line.";
 				Console.WriteLine(">pcolor.exe " + text);
 				WriteColoredString(text + "\n");
 				Console.WriteLine();
@@ -502,7 +509,7 @@ namespace Bricksoft.DosToys
 			}
 
 			private static List<string> ConsoleColorNames = new List<string>(Enum.GetNames(typeof(ConsoleColor)));
-			private static Regex regForeColor = new Regex(@"\{(?:[A-Za-z]*)/?(?:[A-Za-z]*)\}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+			private static Regex regForeColor = new Regex(@"\{(?:[A-Za-z0-9]*)/?(?:[A-Za-z0-9]*)\}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 			//  rstr = @"(?:(/[^:]*)+/?)$";
 
 			public static List<ColoredString> Parse( string Text, params object[] Parameters )
@@ -538,17 +545,28 @@ namespace Bricksoft.DosToys
 					color = m.Value.TrimStart('{').TrimEnd('}');
 					if (color.IndexOf('/') > -1) {
 						colorx = color.Split('/');
-						if (colorx.Length != 2) {
-							throw new InvalidOperationException("Invalid color");
-						}
-						if (colorx[0].Length > 0) {
-							lastFore = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), colorx[0], true);
-						}
-						if (colorx[1].Length > 0) {
-							lastBack = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), colorx[1], true);
+						if (colorx.Length == 2) {
+							if (colorx[0].Length > 0) {
+								if (!GetConsoleColor(colorx[0], out lastFore)) {
+									// Not a valid structure, so output it as plain-text..
+									coloredStrings.Add(new ColoredString(lastFore, lastBack, m.Value));
+								}
+							}
+							if (colorx[1].Length > 0) {
+								if (!GetConsoleColor(colorx[1], out lastBack)) {
+									// Not a valid structure, so output it as plain-text..
+									coloredStrings.Add(new ColoredString(lastFore, lastBack, m.Value));
+								}
+							}
+						} else {
+							// Not a valid structure, so output it as plain-text..
+							coloredStrings.Add(new ColoredString(lastFore, lastBack, m.Value));
 						}
 					} else {
-						lastFore = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), m.Value.TrimStart('{').TrimEnd('}'), true);
+						if (!GetConsoleColor(color, out lastBack)) {
+							// Not a valid structure, so output it as plain-text..
+							coloredStrings.Add(new ColoredString(lastFore, lastBack, m.Value));
+						}
 					}
 
 					lastIndex = m.Index + m.Length;
@@ -562,20 +580,21 @@ namespace Bricksoft.DosToys
 					}
 				}
 
-				//// TODO optimize this by creating a regex for each ConsoleColor.
-				//foreach (string color in ConsoleColorNames) {
-				//	Text = Regex.Replace(Text, @"\{" + color + @"\}", "\r\n@={" + color + @"}", RegexOptions.IgnoreCase);
-				//}
-				//
-				//sections = new List<string>(Text.Split(new string[] { "\r\n@=" }, StringSplitOptions.RemoveEmptyEntries));
-				//
-				//foreach (string val in sections) {
-				//	parts = val.Split(new char[] { '}' }, 2);
-				//	parts[0] = parts[0].Substring(1); // remove the preceding '{'
-				//	coloredStrings.Add(new ColoredString((ConsoleColor)Enum.Parse(typeof(ConsoleColor), parts[0]), parts[1]));
-				//}
-
 				return coloredStrings;
+			}
+
+			public static bool GetConsoleColor( string ColorNameOrNumber, out ConsoleColor Color )
+			{
+				int val;
+				if (int.TryParse(ColorNameOrNumber, out val) && val >= (int)ConsoleColor.Black && val <= (int)ConsoleColor.White) {
+					Color = (ConsoleColor)val;
+					return true;
+				} else if (ConsoleColorNames.Contains(ColorNameOrNumber, StringComparison.InvariantCultureIgnoreCase)) {
+					Color = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), ColorNameOrNumber, true);
+					return true;
+				}
+				Color = ConsoleColor.Black;
+				return false;
 			}
 		}
 
