@@ -563,7 +563,7 @@ namespace Bricksoft.DosToys
 							coloredStrings.Add(new ColoredString(lastFore, lastBack, m.Value));
 						}
 					} else {
-						if (!GetConsoleColor(color, out lastFore)) {
+						if (!GetConsoleColor(color, out lastBack)) {
 							// Not a valid structure, so output it as plain-text..
 							coloredStrings.Add(new ColoredString(lastFore, lastBack, m.Value));
 						}
