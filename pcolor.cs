@@ -42,9 +42,14 @@ namespace Bricksoft.DosToys
 		}
 
 		private string[] args;
-		private ConsoleColor normalColor;
-		private ConsoleColor highlightColor;
-		private ConsoleColor errorColor;
+		private ConsoleColor normalForeColor;
+		private ConsoleColor normalBackColor;
+		private ConsoleColor highlightForeColor;
+		private ConsoleColor highlightBackColor;
+		private ConsoleColor errorForeColor;
+		private ConsoleColor errorBackColor;
+
+		private static List<string> ConsoleColorNames = new List<string>(Enum.GetNames(typeof(ConsoleColor)));
 
 		public pcolor( string[] arguments )
 		{
@@ -53,9 +58,12 @@ namespace Bricksoft.DosToys
 
 		public int Run()
 		{
-			normalColor = Console.ForegroundColor;
-			highlightColor = ConsoleColor.Cyan;
-			errorColor = ConsoleColor.Red;
+			normalForeColor = Console.ForegroundColor;
+			normalBackColor = Console.BackgroundColor;
+			highlightForeColor = ConsoleColor.Cyan;
+			highlightBackColor = Console.BackgroundColor;
+			errorForeColor = ConsoleColor.Red;
+			errorBackColor = Console.BackgroundColor;
 
 			if (args.Length == 0 || (args.Length > 0 && args[0].EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "/?", "/h", "/help"))) {
 				DisplayUsage(args.Length > 1 ? args[1] : null);
@@ -82,10 +90,7 @@ namespace Bricksoft.DosToys
 			try {
 				if (args.Length == 2 && (args[0].Equals("-s", StringComparison.CurrentCultureIgnoreCase) || args[0].Equals("-set", StringComparison.CurrentCultureIgnoreCase))) {
 					ConsoleColor tmpColor;
-					string[] colors;
 					string arg;
-
-					colors = Enum.GetNames(typeof(ConsoleColor));
 
 					arg = args[1];
 					if (arg.StartsWith("{") && arg.EndsWith("}")) {
@@ -93,16 +98,17 @@ namespace Bricksoft.DosToys
 					}
 
 					// Convert old DOS colors to .net ConsoleColor
-					arg = ConvertDOSColors(arg);
+					arg = ConvertDOSColors(arg); // TODO support bg
 
-					if (int.TryParse(arg, out result)) {
+					if (int.TryParse(arg, out result)
+							&& result >= (int)ConsoleColor.Black && result <= (int)ConsoleColor.White) {
 						tmpColor = (ConsoleColor)result;
-					} else if (colors.Contains(arg, StringComparison.InvariantCultureIgnoreCase)) {
+					} else if (ConsoleColorNames.Contains(arg, StringComparison.InvariantCultureIgnoreCase)) {
 						tmpColor = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), arg, true);
 					} else {
 						Console.ForegroundColor = ConsoleColor.Red;
 						Console.WriteLine("error in -s argument: invalid color specified");
-						Console.ForegroundColor = normalColor;
+						Console.ForegroundColor = normalForeColor;
 						return 10;
 					}
 
@@ -111,7 +117,7 @@ namespace Bricksoft.DosToys
 					} catch (Exception) {
 						Console.ForegroundColor = ConsoleColor.Red;
 						Console.WriteLine("error in -s argument: invalid color specified");
-						Console.ForegroundColor = normalColor;
+						Console.ForegroundColor = normalForeColor;
 						return 10;
 					}
 
@@ -137,10 +143,10 @@ namespace Bricksoft.DosToys
 								contents = new StringBuilder();
 
 								if (!File.Exists(args[argsi])) {
-									Console.ForegroundColor = errorColor;
+									Console.ForegroundColor = errorForeColor;
 									WriteLine(ConsoleColor.Red, "-f    the file was not found");
 									DisplayUsage("-f");
-									Console.ForegroundColor = normalColor;
+									Console.ForegroundColor = normalForeColor;
 									return 4;
 								}
 
@@ -148,10 +154,10 @@ namespace Bricksoft.DosToys
 									cmdlineBuilder.Append(contents.ToString());
 								}
 							} else {
-								Console.ForegroundColor = errorColor;
+								Console.ForegroundColor = errorForeColor;
 								WriteLine(ConsoleColor.Red, "-f    is missing its file name");
 								DisplayUsage("-f");
-								Console.ForegroundColor = normalColor;
+								Console.ForegroundColor = normalForeColor;
 								return 4;
 							}
 
@@ -214,7 +220,7 @@ namespace Bricksoft.DosToys
 
 				// Provide a default color.
 				if (!cmdline.StartsWith("{")) {
-					cmdline = "{" + normalColor.ToString() + "}" + cmdline;
+					cmdline = "{" + normalForeColor.ToString() + "/" + normalBackColor.ToString() + "}" + cmdline;
 				}
 
 				WriteColoredString(cmdline);
@@ -225,10 +231,20 @@ namespace Bricksoft.DosToys
 				return 1;
 			}
 
-			Console.ForegroundColor = normalColor;
+			Console.ForegroundColor = normalForeColor;
 
 			return 0;
 		}
+
+		private Regex regAqua = new Regex(@".*[~\{]\{aqua\}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		private Regex regPurple = new Regex(@".*[~\{]\{purple\}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		private Regex regLightBlue = new Regex(@".*[~\{]\{light blue\}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		private Regex regLightGreen = new Regex(@".*[~\{]\{light green\}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		private Regex regLightAqua = new Regex(@".*[~\{]\{light Aqua\}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		private Regex regLightRed = new Regex(@".*[~\{]\{light red\}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		private Regex regLightPurple = new Regex(@".*[~\{]\{light purple\}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		private Regex regLightYellow = new Regex(@".*[~\{]\{light yellow\}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		private Regex regBrightWhite = new Regex(@".*[~\{]\{bright white\}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
 		private string ConvertDOSColors( string Text )
 		{
@@ -236,15 +252,15 @@ namespace Bricksoft.DosToys
 				return string.Empty;
 			}
 
-			Text = Regex.Replace(Text, @".*[~\{]\{aqua\}", "{DarkCyan}", RegexOptions.IgnoreCase);
-			Text = Regex.Replace(Text, @".*[~\{]\{purple\}", "{DarkMagenta}", RegexOptions.IgnoreCase);
-			Text = Regex.Replace(Text, @".*[~\{]\{light blue\}", "{Blue}", RegexOptions.IgnoreCase);
-			Text = Regex.Replace(Text, @".*[~\{]\{light green\}", "{Green}", RegexOptions.IgnoreCase);
-			Text = Regex.Replace(Text, @".*[~\{]\{light Aqua\}", "{Cyan}", RegexOptions.IgnoreCase);
-			Text = Regex.Replace(Text, @".*[~\{]\{light red\}", "{Red}", RegexOptions.IgnoreCase);
-			Text = Regex.Replace(Text, @".*[~\{]\{light purple\}", "{Magenta}", RegexOptions.IgnoreCase);
-			Text = Regex.Replace(Text, @".*[~\{]\{light yellow\}", "{Yellow}", RegexOptions.IgnoreCase);
-			Text = Regex.Replace(Text, @".*[~\{]\{bright white\}", "{White}", RegexOptions.IgnoreCase);
+			Text = regAqua.Replace(Text, "{DarkCyan}");
+			Text = regPurple.Replace(Text, "{DarkMagenta}");
+			Text = regLightBlue.Replace(Text, "{Blue}");
+			Text = regLightGreen.Replace(Text, "{Green}");
+			Text = regLightAqua.Replace(Text, "{Cyan}");
+			Text = regLightRed.Replace(Text, "{Red}");
+			Text = regLightPurple.Replace(Text, "{Magenta}");
+			Text = regLightYellow.Replace(Text, "{Yellow}");
+			Text = regBrightWhite.Replace(Text, "{White}");
 
 			return Text;
 		}
@@ -253,32 +269,42 @@ namespace Bricksoft.DosToys
 
 		private void DisplayUsage( string Topic, bool ShowHidden )
 		{
-			Console.ForegroundColor = highlightColor;
-			Console.WriteLine("color.exe [-s] [-f filename] ...");
-			Console.ForegroundColor = normalColor;
-			Console.WriteLine("Copyright (C) 2010-2015 Kody Brown.");
-			Console.WriteLine("Released under the MIT license. Use at your own risk.");
+			string text = "",
+				text2 = "";
+
+			Console.ForegroundColor = highlightForeColor;
+			Console.WriteLine("color.exe");
+			Console.ForegroundColor = normalForeColor;
+			Console.WriteLine(Text.Wrap("Copyright (C) 2010-2015 Kody Brown."));
+			Console.WriteLine(Text.Wrap("Released under the MIT license. Use at your own risk."));
 			Console.WriteLine();
 
-			Console.WriteLine("   -cr                 Convert the char literals `\\`+`r` to `\\r`.");
-			Console.WriteLine("   !cr                 Do not convert the char literals from `\\`+`r` to `\\r`.");
-			Console.WriteLine("   -lf                 Convert the char literals `\\`+`n` to `\\n`.");
-			Console.WriteLine("   !lf                 Do not convert the char literals from `\\`+`n` to `\\n`.");
-			Console.WriteLine("   -tab                Convert the char literals `\\`+`t` to `\\t`.");
-			Console.WriteLine("   !tab                Do not convert the char literals from `\\`+`t` to `\\t`.");
+			Console.ForegroundColor = ConsoleColor.White;
+			Console.WriteLine("USAGE:");
+			Console.ForegroundColor = normalForeColor;
 			Console.WriteLine();
-			Console.WriteLine("   -crlf               Converts cr, lf, and tab literals.");
-			Console.WriteLine("   !crlf               Do not convert any.");
+			Console.WriteLine("  color.exe [-s] [-f filename] ...");
+			Console.WriteLine();
+
+			Console.WriteLine(Text.Wrap("   -cr                 Convert the char literals `\\`+`r` to `\\r`.", 0, 0, 23));
+			Console.WriteLine(Text.Wrap("   !cr                 Do not convert the char literals from `\\`+`r` to `\\r`.", 0, 0, 23));
+			Console.WriteLine(Text.Wrap("   -lf                 Convert the char literals `\\`+`n` to `\\n`.", 0, 0, 23));
+			Console.WriteLine(Text.Wrap("   !lf                 Do not convert the char literals from `\\`+`n` to `\\n`.", 0, 0, 23));
+			Console.WriteLine(Text.Wrap("   -tab                Convert the char literals `\\`+`t` to `\\t`.", 0, 0, 23));
+			Console.WriteLine(Text.Wrap("   !tab                Do not convert the char literals from `\\`+`t` to `\\t`.", 0, 0, 23));
+			Console.WriteLine();
+			Console.WriteLine(Text.Wrap("   -crlf               Converts cr, lf, and tab literals.", 0, 0, 23));
+			Console.WriteLine(Text.Wrap("   !crlf               Do not convert any.", 0, 0, 23));
 			Console.WriteLine();
 			Console.WriteLine(Text.Wrap("   -wrap               Wraps the output to the console width. Wraps each argument by itself.", 0, 0, 23));
-			Console.WriteLine("   !wrap               Turns wrapping off.");
+			Console.WriteLine(Text.Wrap("   !wrap               Turns wrapping off.", 0, 0, 23));
 
 			if (Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "c", "color")) {
-				Console.ForegroundColor = highlightColor;
+				Console.ForegroundColor = highlightForeColor;
 			}
 			Console.WriteLine();
-			Console.WriteLine(Text.Wrap("   {color}             The color to use. Use the color value (number) or name of the color (case in-sensitive). All text following the color will be displayed in that color.", 0, 0, 23));
-			Console.ForegroundColor = normalColor;
+			Console.WriteLine(Text.Wrap("   {color}             The color to use. Use the color value (number) or name of the color (case in-sensitive). All text following the color will be displayed in that color.\n\nTo specify the foreground and background colors, separate the colors with a forward slash `{fore/back}`. If you want to only change the background color, remove the forecolor, but leave the forward-slash `{/back}.", 0, 0, 23));
+			Console.ForegroundColor = normalForeColor;
 
 			Console.WriteLine();
 			Console.WriteLine(Text.Wrap("The flags above are all 'chainable', meaning they can be used repeatedly throughout the command-line arguments. See the examples for more details.", -6, 6));
@@ -291,22 +317,22 @@ namespace Bricksoft.DosToys
 			//}
 
 			if (Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "f", "file")) {
-				Console.ForegroundColor = highlightColor;
+				Console.ForegroundColor = highlightForeColor;
 			}
 			Console.WriteLine();
 			Console.WriteLine(Text.Wrap("   -s color            Apply the color to the console, not just the text being output.", 0, 0, 23));
-			Console.ForegroundColor = normalColor;
+			Console.ForegroundColor = normalForeColor;
 
 			Console.WriteLine();
-			Console.WriteLine("   /?                  display help.");
-			Console.WriteLine("   /? examples         display examples.");
-			Console.WriteLine("   /? colors           display colors.");
+			Console.WriteLine(Text.Wrap("   /?                  display help.", 0, 0, 23));
+			Console.WriteLine(Text.Wrap("   /? examples         display examples.", 0, 0, 23));
+			Console.WriteLine(Text.Wrap("   /? colors           display colors.", 0, 0, 23));
 
 			if (ShowHidden || Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "c", "colors")) {
 				Console.WriteLine();
-				Console.ForegroundColor = highlightColor;
+				Console.ForegroundColor = highlightForeColor;
 				Console.WriteLine("Colors:");
-				Console.ForegroundColor = normalColor;
+				Console.ForegroundColor = normalForeColor;
 				Console.WriteLine();
 
 				string[] names = Enum.GetNames(typeof(ConsoleColor));
@@ -326,47 +352,85 @@ namespace Bricksoft.DosToys
 
 			if (ShowHidden || Topic.EqualsOneOf(StringComparison.InvariantCultureIgnoreCase, "e", "ex", "example", "examples")) {
 				Console.WriteLine();
-				Console.ForegroundColor = highlightColor;
+				Console.ForegroundColor = highlightForeColor;
 				Console.WriteLine("Examples:");
-				Console.ForegroundColor = normalColor;
+				Console.ForegroundColor = normalForeColor;
 				Console.WriteLine();
-				Console.WriteLine("pcolor.exe {Red} \"This line is red.\"");
-				WriteLine(ConsoleColor.Red, "This line is red.");
-				Console.WriteLine();
-				Console.WriteLine("pcolor.exe {Red} This line is red.");
-				WriteLine(ConsoleColor.Red, "This line is red.");
-				Console.WriteLine();
-				Console.WriteLine("pcolor.exe {DarkMagenta} This line is DarkMagenta.");
-				WriteLine(ConsoleColor.DarkMagenta, "This line is DarkMagenta.");
-				Console.WriteLine();
-				Console.WriteLine("pcolor.exe {4} So is this line.");
-				WriteLine(ConsoleColor.DarkMagenta, "So is this line.");
-				Console.WriteLine();
-				Console.WriteLine("pcolor.exe {Green} The \"quotes\" will not be displayed.");
-				WriteLine(ConsoleColor.Green, "The quotes will not be displayed.");
-				Console.WriteLine();
-				Console.WriteLine("pcolor.exe {Yellow} Unless you do \"\"\"this\"\"\" instead.");
-				WriteLine(ConsoleColor.Yellow, "Unless you do \"this\" instead.");
-				Console.WriteLine();
-				Console.WriteLine("pcolor.exe {Red} \"Red\" {White} \"White\" {Blue} \"Blue\".");
-				Write(ConsoleColor.Red, "Red ");
-				Write(ConsoleColor.White, "White ");
-				WriteLine(ConsoleColor.Blue, "Blue");
-				Console.WriteLine();
-				Console.WriteLine("pcolor.exe {Red} \\\"Red\\\" {White} \\\"White\\\" {Blue} \\\"Blue\\\".");
-				Write(ConsoleColor.Red, "\"Red\" ");
-				Write(ConsoleColor.White, "\"White\" ");
-				WriteLine(ConsoleColor.Blue, "\"Blue\"");
-				Console.WriteLine();
-				//pcolor.exe --crlf "{Red}\tRed\n{White}\tWhite\n" -!crlf "{Gray}\tand..\n" "{Blue}\tBlue\n."
-				Console.WriteLine("pcolor.exe --crlf \"{Red}\\tRed\\n{White}\\tWhite\\n\" -!crlf \"{Gray}\\tand..\\n\" \"{Blue}\\tBlue\\n.\"");
-				Write(ConsoleColor.Red, "\"Red\" ");
-				Write(ConsoleColor.White, "\"White\" ");
-				WriteLine(ConsoleColor.Blue, "\"Blue\"");
 
+				text = "{Red} \"This line is red.\"";
+				Console.WriteLine(">pcolor.exe " + text);
+				WriteColoredString(text.Replace("\"", "") + "\n");
+				Console.WriteLine();
+
+				text = "{Red} This line is red.";
+				Console.WriteLine(">pcolor.exe " + text);
+				WriteColoredString(text + "\n");
+				Console.WriteLine();
+
+				text = "{Red}This line is red.";
+				Console.WriteLine(">pcolor.exe " + text);
+				WriteColoredString(text + "\n");
+				Console.WriteLine();
+
+				text = "{DarkMagenta}This line is DarkMagenta.";
+				Console.WriteLine(">pcolor.exe " + text);
+				WriteColoredString(text + "\n");
+				Console.WriteLine();
+
+				text = "{5}So is this line.";
+				Console.WriteLine(">pcolor.exe " + text);
+				WriteColoredString(text + "\n");
+				Console.WriteLine();
+
+				text = "{Green}The \"quotes\" will not be displayed.";
+				Console.WriteLine(">pcolor.exe " + text);
+				WriteColoredString(text.Replace("\"", "") + "\n");
+				Console.WriteLine();
+
+				text = "{Yellow}Unless you do \"\"\"this\"\"\" or \\\"this\\\" instead.";
+				Console.WriteLine(">pcolor.exe " + text);
+				WriteColoredString(text.Replace("\\\"", "\"").Replace("\"\"\"", "\"") + "\n");
+				Console.WriteLine();
+
+				text = "{Red} \"Red\" {White} \"White\" {Blue} \"Blue\"";
+				Console.WriteLine(">pcolor.exe " + text.Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\t", "\\t"));
+				WriteColoredString(text + "\n");
+				Console.WriteLine();
+
+				text = "{Red} \"Red\" {White} \"White\" {Blue} \"Blue\"";
+				Console.WriteLine(">pcolor.exe " + text.Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\t", "\\t"));
+				WriteColoredString(text + "\n");
+				Console.WriteLine();
+
+				text = "{Red}\"Red\" {White}\"White\" {Blue}\"Blue\"";
+				Console.WriteLine(">pcolor.exe " + text.Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\t", "\\t"));
+				WriteColoredString(text + "\n");
+				Console.WriteLine();
+
+				//pcolor.exe --crlf "{Red}\tRed\n{White}\tWhite\n" -!crlf "{Gray}\tand..\n" "{Blue}\tBlue\n."
+				text = "{Red}\tRed\n{White}\tWhite\n";
+				text2 = "{Gray}\tand..\n\t{Blue}\tBlue\n.";
+				Console.WriteLine(">pcolor.exe --crlf \"" + text.Replace("\n", "\\n").Replace("\t", "\\t") + "\" -!crlf \"" + text2.Replace("\n", "\\n").Replace("\t", "\\t") + "\"");
+				WriteColoredString(text + text2.Replace("\n", "\\n").Replace("\t", "\\t") + "\n");
+				Console.WriteLine();
+
+				text = @"
+{White/Blue} * * * * * * {White/Red}                          
+{White/Blue}  * * * * *  {/White}                          
+{White/Blue} * * * * * * {White/Red}                          
+{White/Blue}  * * * * *  {/White}                          
+{White/Blue} * * * * * * {White/Red}                          
+{/White}                                       
+{/Red}                                       
+{/White}                                       
+{/Red}                                       
+{/White}                                       
+{/Red}                                       {/Black} ".Trim();
+				Console.WriteLine(">pcolor.exe -crlf \"" + text.Replace("\r\n", "\n").Replace("\n", "\\n") + "\"");
+				WriteColoredString(text + "\n");
 			}
 
-			Console.ForegroundColor = normalColor;
+			Console.ForegroundColor = normalForeColor;
 		}
 
 		/* ----- PowerCode ------------------------------------------------------------------------------------------------------------------------------------------------------ */
@@ -379,17 +443,25 @@ namespace Bricksoft.DosToys
 			Console.ForegroundColor = backupForeColor;
 		}
 
-		private void Write( ConsoleColor foreColor, string format, params object[] parameters ) { Write(foreColor, Console.BackgroundColor, format, parameters); }
+		private void Write( ConsoleColor foreColor, string format, params object[] parameters )
+		{
+			Write(foreColor, Console.BackgroundColor, format, parameters);
+		}
 
-		private void Write( ConsoleColor foreColor, ConsoleColor backColor, string format, params object[] parameters )
+		private void Write( ConsoleColor foreColor, ConsoleColor backColor, string value )
 		{
 			ConsoleColor backupForeColor = Console.ForegroundColor;
 			ConsoleColor backupBackColor = Console.BackgroundColor;
 			Console.ForegroundColor = foreColor;
 			Console.BackgroundColor = backColor;
-			Console.Write(format, parameters);
+			Console.Write(value);
 			Console.ForegroundColor = backupForeColor;
 			Console.BackgroundColor = backupBackColor;
+		}
+
+		private void Write( ConsoleColor foreColor, ConsoleColor backColor, string format, params object[] parameters )
+		{
+			Write(foreColor, backColor, string.Format(format, parameters));
 		}
 
 		private void WriteLine( ConsoleColor foreColor, string value )
@@ -398,9 +470,21 @@ namespace Bricksoft.DosToys
 			Console.WriteLine();
 		}
 
+		private void WriteLine( ConsoleColor foreColor, ConsoleColor backColor, string value )
+		{
+			Write(foreColor, backColor, value);
+			Console.WriteLine();
+		}
+
 		private void WriteLine( ConsoleColor foreColor, string format, params object[] parameters )
 		{
 			Write(foreColor, Console.BackgroundColor, format, parameters);
+			Console.WriteLine();
+		}
+
+		private void WriteLine( ConsoleColor foreColor, ConsoleColor backColor, string format, params object[] parameters )
+		{
+			Write(foreColor, backColor, format, parameters);
 			Console.WriteLine();
 		}
 
@@ -412,16 +496,27 @@ namespace Bricksoft.DosToys
 		/// </summary>
 		private class ColoredString
 		{
-			public ConsoleColor Color { get; set; }
+			public ConsoleColor ForeColor { get; set; }
+			public ConsoleColor BackColor { get; set; }
 			public string Text { get; set; }
 			public ColoredString() { }
-			public ColoredString( ConsoleColor Color, string Text ) { this.Color = Color; this.Text = Text; }
+			public ColoredString( ConsoleColor ForeColor, string Text ) : this(ForeColor, Console.BackgroundColor, Text) { }
+			public ColoredString( ConsoleColor ForeColor, ConsoleColor BackColor, string Text )
+			{
+				this.ForeColor = ForeColor;
+				this.BackColor = BackColor;
+				this.Text = Text;
+			}
+
+			private static List<string> ConsoleColorNames = new List<string>(Enum.GetNames(typeof(ConsoleColor)));
+			private static Regex regForeColor = new Regex(@"\{(?:[A-Za-z0-9]*)/?(?:[A-Za-z0-9]*)\}", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+			//  rstr = @"(?:(/[^:]*)+/?)$";
 
 			public static List<ColoredString> Parse( string Text, params object[] Parameters )
 			{
 				List<ColoredString> coloredStrings;
-				List<string> sections;
-				string[] parts;
+				//List<string> sections;
+				//string[] parts;
 
 				if (Parameters != null && Parameters.Length > 0) {
 					Text = string.Format(Text, Parameters);
@@ -429,22 +524,77 @@ namespace Bricksoft.DosToys
 
 				coloredStrings = new List<ColoredString>();
 
-				foreach (string color in Enum.GetNames(typeof(ConsoleColor))) {
-					//if (Text.IndexOf("{" + color + "}") > -1) {
-					//   Text = Text.Replace("{" + color + "}", "\r\n@={" + color + "}");
-					//}
-					Text = Regex.Replace(Text, @"\{" + color + @"\}", "\r\n@={" + color + @"}", RegexOptions.IgnoreCase);
+				Match m;
+				int lastIndex = 0;
+				ConsoleColor
+					lastFore = Console.ForegroundColor,
+					lastBack = Console.BackgroundColor;
+				string
+					tmpText = "",
+					color = "";
+				string[] colorx;
+
+				m = regForeColor.Match(Text);
+				while (m.Success) {
+					// NOTE: I'm breaking on the colors, so I must output the text before the color change..
+					tmpText = Text.Substring(lastIndex, m.Index - lastIndex);
+					if (tmpText.Length > 0) {
+						coloredStrings.Add(new ColoredString(lastFore, lastBack, tmpText));
+					}
+
+					color = m.Value.TrimStart('{').TrimEnd('}');
+					if (color.IndexOf('/') > -1) {
+						colorx = color.Split('/');
+						if (colorx.Length == 2) {
+							if (colorx[0].Length > 0) {
+								if (!GetConsoleColor(colorx[0], out lastFore)) {
+									// Not a valid structure, so output it as plain-text..
+									coloredStrings.Add(new ColoredString(lastFore, lastBack, m.Value));
+								}
+							}
+							if (colorx[1].Length > 0) {
+								if (!GetConsoleColor(colorx[1], out lastBack)) {
+									// Not a valid structure, so output it as plain-text..
+									coloredStrings.Add(new ColoredString(lastFore, lastBack, m.Value));
+								}
+							}
+						} else {
+							// Not a valid structure, so output it as plain-text..
+							coloredStrings.Add(new ColoredString(lastFore, lastBack, m.Value));
+						}
+					} else {
+						if (!GetConsoleColor(color, out lastBack)) {
+							// Not a valid structure, so output it as plain-text..
+							coloredStrings.Add(new ColoredString(lastFore, lastBack, m.Value));
+						}
+					}
+
+					lastIndex = m.Index + m.Length;
+					m = m.NextMatch();
 				}
 
-				sections = new List<string>(Text.Split(new string[] { "\r\n@=" }, StringSplitOptions.RemoveEmptyEntries));
-
-				foreach (string val in sections) {
-					parts = val.Split(new char[] { '}' }, 2);
-					parts[0] = parts[0].Substring(1); // remove the preceding '{'
-					coloredStrings.Add(new ColoredString((ConsoleColor)Enum.Parse(typeof(ConsoleColor), parts[0]), parts[1]));
+				if (lastIndex < Text.Length) {
+					tmpText = Text.Substring(lastIndex);
+					if (tmpText.Length > 0) {
+						coloredStrings.Add(new ColoredString(lastFore, lastBack, tmpText));
+					}
 				}
 
 				return coloredStrings;
+			}
+
+			public static bool GetConsoleColor( string ColorNameOrNumber, out ConsoleColor Color )
+			{
+				int val;
+				if (int.TryParse(ColorNameOrNumber, out val) && val >= (int)ConsoleColor.Black && val <= (int)ConsoleColor.White) {
+					Color = (ConsoleColor)val;
+					return true;
+				} else if (ConsoleColorNames.Contains(ColorNameOrNumber, StringComparison.InvariantCultureIgnoreCase)) {
+					Color = (ConsoleColor)Enum.Parse(typeof(ConsoleColor), ColorNameOrNumber, true);
+					return true;
+				}
+				Color = ConsoleColor.Black;
+				return false;
 			}
 		}
 
@@ -460,7 +610,7 @@ namespace Bricksoft.DosToys
 			coloredStrings = ColoredString.Parse(Text, Parameters);
 
 			foreach (ColoredString coloredString in coloredStrings) {
-				Write(coloredString.Color, coloredString.Text);
+				Write(coloredString.ForeColor, coloredString.BackColor, coloredString.Text);
 			}
 		}
 
@@ -476,7 +626,7 @@ namespace Bricksoft.DosToys
 			coloredStrings = ColoredString.Parse(Text, Parameters);
 
 			foreach (ColoredString coloredString in coloredStrings) {
-				WriteLine(coloredString.Color, coloredString.Text);
+				WriteLine(coloredString.ForeColor, coloredString.Text);
 			}
 		}
 
